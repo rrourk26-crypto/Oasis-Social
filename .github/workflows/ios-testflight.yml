@@ -75,7 +75,7 @@ jobs:
                            key, algorithm="ES256", headers={"kid": os.environ["ASC_KEY_ID"], "typ": "JWT"}))
           PY
           )
-          CODE=$(curl -s -o "$RUNNER_TEMP/asc.json" -w '%{http_code}' -H "Authorization: Bearer $TOKEN" \
+          CODE=$(curl -g -s -o "$RUNNER_TEMP/asc.json" -w '%{http_code}' -H "Authorization: Bearer $TOKEN" \
                  "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=com.myguyinthechair.oasis")
           echo "Apple API responded: HTTP $CODE"
           if [ "$CODE" != "200" ]; then
