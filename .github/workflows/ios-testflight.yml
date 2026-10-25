@@ -18,14 +18,23 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check secrets are set
+        env:
+          P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
-          for v in TEAM_ID ASC_KEY_ID ASC_ISSUER_ID; do
-            [ -n "${!v}" ] || { echo "::error::Missing secret for $v (see ios/README.md)"; exit 1; }
-          done
-          [ -n "${{ secrets.ASC_KEY_P8 }}" ] || { echo "::error::Missing secret ASC_KEY_P8"; exit 1; }
+          missing=""
+          [ -n "$TEAM_ID" ]       || missing="$missing APPLE_TEAM_ID"
+          [ -n "$ASC_KEY_ID" ]    || missing="$missing ASC_KEY_ID"
+          [ -n "$ASC_ISSUER_ID" ] || missing="$missing ASC_ISSUER_ID"
+          [ -n "$P8" ]            || missing="$missing ASC_KEY_P8"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (add them under Settings > Secrets and variables > Actions > Secrets tab)"
+            exit 1
+          fi
+          case "$P8" in *"BEGIN PRIVATE KEY"*) ;; *) echo "::error::ASC_KEY_P8 must include the -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY----- lines"; exit 1;; esac
+          echo "All 4 secrets found."
 
       - name: Show Xcode version
         run: xcodebuild -version
