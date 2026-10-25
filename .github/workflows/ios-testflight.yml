@@ -50,7 +50,7 @@ jobs:
           printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey.p8"
           echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
 
-      - name: Archive (signed automatically by Apple)
+      - name: Archive (unsigned; Apple signs it during export)
         run: |
           set -o pipefail
           xcodebuild archive \
@@ -59,12 +59,10 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Oasis.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             2>&1 | tee "$RUNNER_TEMP/archive.log" || {
               grep -E "error:|error -|\*\* ARCHIVE FAILED|No profiles|No Accounts|requires a provisioning|Signing for" "$RUNNER_TEMP/archive.log" \
