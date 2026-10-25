@@ -52,6 +52,7 @@ jobs:
 
       - name: Archive (signed automatically by Apple)
         run: |
+          set -o pipefail
           xcodebuild archive \
             -project OasisSocial.xcodeproj \
             -scheme OasisSocial \
@@ -64,7 +65,12 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            2>&1 | tee "$RUNNER_TEMP/archive.log" || {
+              grep -E "error:|error -|\*\* ARCHIVE FAILED|No profiles|No Accounts|requires a provisioning|Signing for" "$RUNNER_TEMP/archive.log" \
+                | sed 's/%/%25/g' | sort -u | head -15 | while IFS= read -r line; do echo "::error title=Archive::$line"; done
+              exit 1
+            }
 
       - name: Export and upload to App Store Connect / TestFlight
         run: |
@@ -79,6 +85,7 @@ jobs:
             <key>manageAppVersionAndBuildNumber</key><false/>
           </dict></plist>
           EOF
+          set -o pipefail
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/Oasis.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
@@ -86,7 +93,12 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/export.log" || {
+              grep -E "error:|error -|EXPORT FAILED|Upload|App Store Connect" "$RUNNER_TEMP/export.log" \
+                | sed 's/%/%25/g' | sort -u | head -15 | while IFS= read -r line; do echo "::error title=Export/Upload::$line"; done
+              exit 1
+            }
 
       - name: Clean up key
         if: always()
