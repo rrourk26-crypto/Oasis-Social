@@ -1,0 +1,39 @@
+name: OasisSocial
+options:
+  bundleIdPrefix: com.myguyinthechair
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""          # put your Apple Developer Team ID here
+    TARGETED_DEVICE_FAMILY: "1"   # iPhone only for now; "1,2" adds iPad
+
+targets:
+  OasisSocial:
+    type: application
+    platform: iOS
+    scheme: {}
+    sources:
+      - OasisSocial/Sources
+      - OasisSocial/Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.myguyinthechair.oasis
+        PRODUCT_NAME: Oasis Social
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Oasis
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # Permission prompts — same capabilities the Android build requests
+        INFOPLIST_KEY_NSCameraUsageDescription: "Oasis uses the camera so you can take photos and videos to share."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Oasis uses the microphone when you record video to share."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Oasis lets you choose photos and videos from your library to share."
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Oasis can save images you download to your photo library."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Oasis uses your location only when you choose to add it to a post."
