@@ -27,6 +27,7 @@ targets:
         PRODUCT_NAME: Oasis Social
         TARGETED_DEVICE_FAMILY: "1"          # iPhone only
         INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO   # only standard HTTPS; skips the export compliance question
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: YES
