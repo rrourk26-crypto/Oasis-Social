@@ -45,10 +45,45 @@ jobs:
           xcodegen generate
 
       - name: Write App Store Connect API key
+        env:
+          P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey.p8"
-          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
+          KEY_FILE="$RUNNER_TEMP/keys/AuthKey.p8"
+          # strip Windows line endings / stray spaces that break the key
+          printf '%s\n' "$P8" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -v '^$' > "$KEY_FILE"
+          echo "KEY_PATH=$KEY_FILE" >> "$GITHUB_ENV"
+          # trim whitespace from the IDs too
+          echo "ASC_KEY_ID=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "ASC_ISSUER_ID=$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "TEAM_ID=$(printf '%s' "$TEAM_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          if openssl pkey -in "$KEY_FILE" -noout 2>/dev/null; then
+            echo "Key file parses as a valid private key."
+          else
+            echo "::error title=API key::ASC_KEY_P8 is not a valid private key. Re-paste the whole .p8 file contents."
+            exit 1
+          fi
+
+      - name: Verify API key with Apple
+        run: |
+          python3 -m pip install --quiet --break-system-packages "pyjwt[crypto]" 2>/dev/null || python3 -m pip install --quiet "pyjwt[crypto]"
+          TOKEN=$(python3 - <<'PY'
+          import jwt, os, time
+          key = open(os.environ["KEY_PATH"]).read()
+          now = int(time.time())
+          print(jwt.encode({"iss": os.environ["ASC_ISSUER_ID"], "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
+                           key, algorithm="ES256", headers={"kid": os.environ["ASC_KEY_ID"], "typ": "JWT"}))
+          PY
+          )
+          CODE=$(curl -s -o "$RUNNER_TEMP/asc.json" -w '%{http_code}' -H "Authorization: Bearer $TOKEN" \
+                 "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=com.myguyinthechair.oasis")
+          echo "Apple API responded: HTTP $CODE"
+          if [ "$CODE" != "200" ]; then
+            DETAIL=$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/asc.json'));print('; '.join(e.get('detail','') for e in d.get('errors',[])))" 2>/dev/null)
+            echo "::error title=API key rejected by Apple (HTTP $CODE)::$DETAIL -- Key ID length ${#ASC_KEY_ID} (should be 10), Issuer ID length ${#ASC_ISSUER_ID} (should be 36). Check the key ID matches the .p8 file and the issuer ID is correct."
+            exit 1
+          fi
+          python3 -c "import json;d=json.load(open('$RUNNER_TEMP/asc.json'));print('Found app:', [a['attributes']['name'] for a in d['data']])"
 
       - name: Archive (unsigned; Apple signs it during export)
         run: |
