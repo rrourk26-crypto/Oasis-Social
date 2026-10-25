@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     defaults:
       run:
@@ -36,8 +36,16 @@ jobs:
           case "$P8" in *"BEGIN PRIVATE KEY"*) ;; *) echo "::error::ASC_KEY_P8 must include the -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY----- lines"; exit 1;; esac
           echo "All 4 secrets found."
 
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Select newest Xcode (26 or later required by Apple)
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+          [ -n "$XC" ] && sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+          MAJOR=$(xcodebuild -version | head -1 | awk '{print $2}' | cut -d. -f1)
+          if [ "$MAJOR" -lt 26 ]; then
+            echo "::error title=Xcode too old::Found Xcode $MAJOR on this runner; Apple requires Xcode 26+."
+            exit 1
+          fi
 
       - name: Generate Xcode project
         run: |
